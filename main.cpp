@@ -1,28 +1,36 @@
 #include "main.h"
 
-int main()
-{
+void GenerateUsers () {
     vector<User> users;
     users.reserve(1000);
 
-    mt19937 gen(random_device{}());
+    mt19937 rndDev(random_device{}());
     uniform_int_distribution<uint64_t> rndBalance(100, 1000000);
     uniform_int_distribution<int> rndLetters('A', 'Z');
 
+    ofstream outFile("data/users.txt");
+    if (!outFile.is_open()) {
+        cerr << "Nera failo duomenu irasymui!" << endl;
+        return;
+    }
+
     for (int i = 0; i < 1000; ++i)
     {
-       string name = "User_" + to_string(i + 1);
-       string key = "PUBKEY_";
-       for (int j = 0; j < 8; ++j) key += static_cast<char>(rndLetters(gen));
-       uint64_t  balance = rndBalance(gen);
+        string name = "User_" + to_string(i + 1);
+        string key = "PUBKEY_";
+        for (int j = 0; j < 16; ++j) key += static_cast<char>(rndLetters(rndDev));
+        uint64_t  balance = rndBalance(rndDev);
 
-       users.emplace_back(name, key, balance);
+        users.emplace_back(name, key, balance);
+        outFile << users[i].getName() << "," << users[i].getKey() << "," << users[i].getBalance() << endl;
+        cout << "Vardas: " << users[i].getName() << " | Raktas: " << users[i].getKey() << " | Balansas: " << users[i].getBalance() << endl;
     }
-    
+    cout << "Is viso vartotoju sugeneruota: " << users.size() << endl;
+    outFile.close();
+}
 
-    // 2 testas
-    cout << "Generated Users: " << users.size() << endl;
-    cout << "User: " << users[999].getName() << " | Key: " << users[999].getKey() << " | Balance: " << users[999].getBalance() << endl;
-
+int main()
+{
+    GenerateUsers();
     return 0;
 }

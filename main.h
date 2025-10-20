@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <random>
+#include <fstream>
 using namespace std;
 
 class User {
