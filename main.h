@@ -21,3 +21,20 @@ public:
     const string& getKey() const;
     uint64_t getBalance() const;
 };
+
+class Transaction {
+private:
+    string transactionID_;
+    string sender_;
+    string receiver_;
+    uint64_t amount_;
+
+public:
+    Transaction(const string& sender, const string& receiver, uint64_t amount);
+    ~Transaction();
+
+    const string& getID() const;
+    const string& getSender() const;
+    const string& getReceiver() const;
+    uint64_t getAmount() const;
+};

@@ -31,6 +31,12 @@ void GenerateUsers () {
 
 int main()
 {
-    GenerateUsers();
+    //GenerateUsers();
+
+    //1 testas
+    Transaction t("PUBKEY_ABC", "PUBKEY_XYZ", 500);
+    cout << t.getSender() << " -> " << t.getReceiver() << " : " << t.getAmount() << endl;
+
+
     return 0;
 }
