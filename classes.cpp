@@ -50,4 +50,4 @@ Transaction::~Transaction() {}
 const string& Transaction::getID() const { return transactionID_; }
 const string& Transaction::getSender() const { return sender_; }
 const string& Transaction::getReceiver() const { return receiver_; }
-uint64_t Transaction::getAmount() const {return amount_;};
+uint64_t Transaction::getAmount() const {return amount_; }

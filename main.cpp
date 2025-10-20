@@ -1,9 +1,9 @@
 #include "main.h"
 
 // Randomizers
-mt19937 rndDev(random_device{}());
+mt19937 rndGen(random_device{}());
 uniform_int_distribution<uint64_t> rndBalance(100, 1000000);
-uniform_int_distribution<int> rndUser(1, 999);
+uniform_int_distribution<int> rndUser(0, 999);
 uniform_int_distribution<int> rndLetter('A', 'Z');
 
 // Functions
@@ -21,8 +21,8 @@ vector<User> GenerateUsers() {
     {
         string name = "User_" + to_string(i + 1);
         string key = "PUBKEY_";
-        for (int j = 0; j < 16; ++j) key += static_cast<char>(rndLetter(rndDev));
-        uint64_t  balance = rndBalance(rndDev);
+        for (int j = 0; j < 16; ++j) key += static_cast<char>(rndLetter(rndGen));
+        uint64_t  balance = rndBalance(rndGen);
 
         User u(name, key, balance);
         users.emplace_back(u);
@@ -34,25 +34,26 @@ vector<User> GenerateUsers() {
     return users;
 }
 
-void GenerateTransaction(vector<User>& users) {
+vector<Transaction> GenerateTransaction(vector<User>& users) {
     vector<Transaction> transactions;
     transactions.reserve(10000);
 
     ofstream outFile("data/transactions.txt");
     if (!outFile.is_open()) {
         cerr << "Nera failo duomenu irasymui!" << endl;
-        return;
+        return vector<Transaction>();
     }
 
-    for (int i = 0; i < 10000; ++i)
+    int generated = 0;
+    while (generated < 10000)
     {
-        int senderInd = rndUser(rndDev);
-        int receiverInd = rndUser(rndDev);
-        while (receiverInd == senderInd) receiverInd = rndUser(rndDev);
+        int senderInd = rndUser(rndGen);
+        int receiverInd = rndUser(rndGen);
+        while (receiverInd == senderInd) receiverInd = rndUser(rndGen);
 
         uint64_t maxAmount = users[senderInd].getBalance();
         if (maxAmount == 0) continue;
-        uint64_t amount = uniform_int_distribution<uint64_t>(1, maxAmount)(rndDev);
+        uint64_t amount = uniform_int_distribution<uint64_t>(1, maxAmount)(rndGen);
         users[senderInd].send(amount);
         users[receiverInd].receive(amount);
 
@@ -60,14 +61,26 @@ void GenerateTransaction(vector<User>& users) {
         transactions.emplace_back(t);
         outFile << t.getID() << "," << t.getSender() << "," << t.getReceiver() << "," << t.getAmount() << endl;
         cout << t.getID() << " | " << t.getSender() << " -> " << t.getReceiver() << " : " << t.getAmount() << endl;
+
+        ++generated;
     }
     cout << "Is viso transakciju sugeneruota: " << transactions.size() << endl;
     outFile.close();
+    return transactions;
 }
 
 int main()
 {
     vector<User> users = GenerateUsers();
+    uint64_t totalBefore = 0;
+    for (auto& u : users) totalBefore += u.getBalance();
+
     GenerateTransaction(users);
+
+    uint64_t totalAfter = 0;
+    for (auto& u : users) totalAfter += u.getBalance();
+
+    cout << "Viso valiutos prieš transakcijas: " << totalBefore << endl;
+    cout << "Viso valiutos po transakcijų: " << totalAfter << endl;
     return 0;
 }
