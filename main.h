@@ -2,17 +2,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdint>
 using namespace std;
 
-class User
-{
+class User {
 private:
-    
-public:
-    string name;
-    string publicKey;
-    double balance;
+    string name_;
+    string publicKey_;
+    uint64_t balance_;
 
-    User(const string& n, const string& pk, double&& b);
+public:
+    User(const string& name, const string& publicKey, uint64_t&& balance);
     ~User();
+
+    const string& getName();
+    const string& getKey();
+    uint64_t getBalance() const;
 };
