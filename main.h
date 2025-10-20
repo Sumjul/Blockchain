@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <random>
 using namespace std;
 
 class User {
@@ -12,10 +13,10 @@ private:
     uint64_t balance_;
 
 public:
-    User(const string& name, const string& publicKey, uint64_t&& balance);
+    User(const string& name, const string& publicKey, uint64_t balance);
     ~User();
 
-    const string& getName();
-    const string& getKey();
+    const string& getName() const;
+    const string& getKey() const;
     uint64_t getBalance() const;
 };
