@@ -35,6 +35,10 @@ const string& User::getName() const { return name_; }
 const string& User::getKey() const { return publicKey_; }
 uint64_t User::getBalance() const { return balance_; }
 
+bool User::canSend(uint64_t amount) const { return balance_ >= amount; }
+void User::send(uint64_t amount) { if (canSend(amount)) balance_ -= amount; }
+void User::receive(uint64_t amount) { balance_ += amount; }
+
 // Transaction
 Transaction::Transaction(const string& sender, const string& receiver, uint64_t amount)
 : sender_(sender), receiver_(receiver), amount_(amount) {

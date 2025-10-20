@@ -20,6 +20,10 @@ public:
     const string& getName() const;
     const string& getKey() const;
     uint64_t getBalance() const;
+
+    bool canSend(uint64_t amount) const;
+    void send(uint64_t amount);
+    void receive(uint64_t amount);
 };
 
 class Transaction {
