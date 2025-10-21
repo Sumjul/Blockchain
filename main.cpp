@@ -17,8 +17,7 @@ vector<User> GenerateUsers() {
         return vector<User>();
     }
 
-    for (int i = 0; i < 1000; ++i)
-    {
+    for (int i = 0; i < 1000; ++i) {
         string name = "User_" + to_string(i + 1);
         string key = "PUBKEY_";
         for (int j = 0; j < 16; ++j) key += static_cast<char>(rndLetter(rndGen));
@@ -45,8 +44,7 @@ vector<Transaction> GenerateTransaction(vector<User>& users) {
     }
 
     int generated = 0;
-    while (generated < 10000)
-    {
+    while (generated < 10000) {
         int senderInd = rndUser(rndGen);
         int receiverInd = rndUser(rndGen);
         while (receiverInd == senderInd) receiverInd = rndUser(rndGen);
@@ -69,13 +67,45 @@ vector<Transaction> GenerateTransaction(vector<User>& users) {
     return transactions;
 }
 
+void MineBlock(vector<Transaction>& pendingTransactions, vector<Block> chain, int difficulty) {
+    if (pendingTransactions.empty()) {
+        cout << "Nera transakciju bloko formavimui" << endl;
+        return;
+    }
+    size_t minSize = min<size_t>(100, pendingTransactions.size());
+
+    vector<Transaction> blockTransactions;
+    blockTransactions.reserve(minSize);
+    for (size_t i = 0; i < minSize; ++i) {
+        blockTransactions.push_back(pendingTransactions.back());
+        pendingTransactions.pop_back();
+    }
+    
+    string prevHash = chain.empty() ? string("0") : chain.back().getHash();
+    Block currentBlock(prevHash, blockTransactions, difficulty);
+    auto start = chrono::high_resolution_clock::now();
+    currentBlock.mineBlock();
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> duration = end - start;
+    chain.push_back(currentBlock);
+
+     cout << "Iskastas Blokas #" << chain.size() << "hash'as = " << currentBlock.getHash() << "..." << " transakcijos = " << blockTransactions.size() << " laikas = " << duration.count() << " sekundziu" << endl;
+}
+
 int main()
 {
-    //vector<User> users = GenerateUsers();
+    vector<User> users = GenerateUsers();
     //uint64_t totalBefore = 0;
     //for (auto& u : users) totalBefore += u.getBalance();
 
-    //GenerateTransaction(users);
+    vector<Transaction> transactions = GenerateTransaction(users);
+
+    vector<Block> chain;
+    int difficulty = 3;
+    while (!transactions.empty()) {
+        MineBlock(transactions, chain, difficulty);
+    }
+    cout << "Liko neapdorotu tansakciju: " << transactions.size();
 
     //uint64_t totalAfter = 0;
     //for (auto& u : users) totalAfter += u.getBalance();

@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <random>
 #include <fstream>
+#include <chrono>
+#include <algorithm>
 using namespace std;
 
 string HashFun(const string&);
