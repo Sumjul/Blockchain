@@ -71,16 +71,16 @@ vector<Transaction> GenerateTransaction(vector<User>& users) {
 
 int main()
 {
-    vector<User> users = GenerateUsers();
-    uint64_t totalBefore = 0;
-    for (auto& u : users) totalBefore += u.getBalance();
+    //vector<User> users = GenerateUsers();
+    //uint64_t totalBefore = 0;
+    //for (auto& u : users) totalBefore += u.getBalance();
 
-    GenerateTransaction(users);
+    //GenerateTransaction(users);
 
-    uint64_t totalAfter = 0;
-    for (auto& u : users) totalAfter += u.getBalance();
+    //uint64_t totalAfter = 0;
+    //for (auto& u : users) totalAfter += u.getBalance();
 
-    cout << "Viso valiutos prieš transakcijas: " << totalBefore << endl;
-    cout << "Viso valiutos po transakcijų: " << totalAfter << endl;
+    //cout << "Viso valiutos prieš transakcijas: " << totalBefore << endl;
+    //cout << "Viso valiutos po transakcijų: " << totalAfter << endl;
     return 0;
 }

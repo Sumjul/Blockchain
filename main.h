@@ -7,6 +7,8 @@
 #include <fstream>
 using namespace std;
 
+string HashFun(const string&);
+
 class User {
 private:
     string name_;
@@ -41,4 +43,28 @@ public:
     const string& getSender() const;
     const string& getReceiver() const;
     uint64_t getAmount() const;
+};
+
+class Block {
+private:
+    string prevHash_;
+    string merkleRootHash_;
+    int nonce_;
+    int difficulty_;
+    string timestamp_;
+    const string version_ = "v0.1";
+    
+    string blockHash_;
+    vector<Transaction> transactions_;
+
+public:
+    Block(const string& prevHash, const vector<Transaction> transactions, int difficulty);
+    ~Block();
+
+    string getHash() const;
+    string getPrevHash() const;
+    const vector<Transaction> getTransactions() const;
+
+    string calculateMerkleRoot() const;
+    void mineBlock();
 };

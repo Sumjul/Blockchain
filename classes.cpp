@@ -51,3 +51,34 @@ const string& Transaction::getID() const { return transactionID_; }
 const string& Transaction::getSender() const { return sender_; }
 const string& Transaction::getReceiver() const { return receiver_; }
 uint64_t Transaction::getAmount() const {return amount_; }
+
+//Blockchain
+Block::Block(const string& prevHash, const vector<Transaction> transactions, int difficulty)
+: prevHash_(prevHash), transactions_(transactions), difficulty_(difficulty), nonce_(0) {
+    timestamp_ = to_string(time(nullptr));
+    merkleRootHash_ = calculateMerkleRoot();
+}
+Block::~Block() {};
+
+string Block::getHash() const { return blockHash_; }
+string Block::getPrevHash() const { return prevHash_; }
+const vector<Transaction> Block::getTransactions() const { return transactions_; }
+
+string Block::calculateMerkleRoot() const {
+    string all;
+    for (const auto& t : transactions_ )
+    {
+        all += t.getID();
+    }
+    return HashFun(all);
+}
+
+void Block::mineBlock() {
+    string prefix(difficulty_, '0');
+    while(true) {
+        string data = prevHash_ + timestamp_ + merkleRootHash_ + version_ + to_string(nonce_) + to_string(difficulty_);
+        blockHash_ = HashFun(data);
+        if (blockHash_.substr(0, difficulty_) == prefix) break;
+        nonce_++;
+    }
+}
