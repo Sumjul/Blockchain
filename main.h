@@ -8,6 +8,7 @@
 #include <chrono>
 #include <algorithm>
 #include <sstream>
+#include <iomanip>
 using namespace std;
 
 string HashFun(const string&);
@@ -53,9 +54,9 @@ class Block {
 private:
     string prevHash_;
     string merkleRootHash_;
-    int nonce_;
+    uint64_t nonce_;
     int difficulty_;
-    string timestamp_;
+    time_t timestamp_;
     const string version_ = "v0.1";
     
     string blockHash_;
@@ -65,12 +66,14 @@ public:
     Block(const string& prevHash, const vector<Transaction> transactions, int difficulty);
     ~Block();
 
-    string getHash() const;
     string getPrevHash() const;
+    string getHash() const;
+    uint64_t getNonce() const;
+    int getDifficulty() const;
+    time_t getTime() const;
     string getVersion() const;
-    int getNonce() const;
+    
     const vector<Transaction> getTransactions() const;
-
     string calculateMerkleRoot() const;
     void mineBlock();
 };

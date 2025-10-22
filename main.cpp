@@ -20,7 +20,7 @@ vector<User> GenerateUsers() {
         uint64_t  balance = rndBalance(rndGen);
 
         User u(name, key, balance);
-        users.emplace_back(u);
+        users.push_back(u);
         log << "Vardas: " << u.getName() << " | Raktas: " << u.getKey() << " | Balansas: " << u.getBalance() << endl;
     }
     log << "Is viso vartotoju sugeneruota: " << users.size() << endl;
@@ -37,7 +37,7 @@ vector<User> GenerateUsers() {
     return users;
 }
 
-vector<Transaction> GenerateTransaction(vector<User>& users) {
+vector<Transaction> GenerateTransactions(vector<User>& users) {
     vector<Transaction> transactions;
     transactions.reserve(10000);
     ostringstream log;
@@ -52,11 +52,9 @@ vector<Transaction> GenerateTransaction(vector<User>& users) {
         uint64_t maxAmount = users[senderInd].getBalance();
         if (maxAmount == 0) continue;
         uint64_t amount = uniform_int_distribution<uint64_t>(1, maxAmount)(rndGen);
-        users[senderInd].send(amount);
-        users[receiverInd].receive(amount);
 
         Transaction t(users[senderInd].getKey(), users[receiverInd].getKey(), amount);
-        transactions.emplace_back(t);
+        transactions.push_back(t);
         
         log << t.getID() <<  " | " << t.getSender() << " -> " << t.getReceiver() << " : " << t.getAmount() << endl;
         ++generated;
@@ -82,25 +80,26 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
     }
 
     size_t minSize = min<size_t>(100, pendingTransactions.size());
-    vector<Transaction> blockTransactions;
-    blockTransactions.reserve(minSize);
+    shuffle(pendingTransactions.begin(), pendingTransactions.end(), rndGen);
+    vector<Transaction> confirmedTransactions;
+    confirmedTransactions.reserve(minSize);
     for (size_t i = 0; i < minSize; ++i) {
-        blockTransactions.push_back(pendingTransactions.back());
+        confirmedTransactions.push_back(pendingTransactions.back());
         pendingTransactions.pop_back();
     } 
-    string prevHash = chain.empty() ? string("0") : chain.back().getHash();
+    string prevHash = chain.empty() ? to_string(0) : chain.back().getHash();
 
-    Block currentBlock(prevHash, blockTransactions, difficulty);
+    Block currentBlock(prevHash, confirmedTransactions, difficulty);
     auto start = chrono::high_resolution_clock::now();
     currentBlock.mineBlock();
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
     chain.push_back(currentBlock);
 
-    for (const auto& t : blockTransactions) {
+    for (const auto& t : confirmedTransactions) {
         for (auto& u : users) {
-            if (u.getName() == t.getSender()) u.setBalance(u.getBalance() - t.getAmount());
-            if (u.getName() == t.getReceiver()) u.setBalance(u.getBalance() + t.getAmount());
+            if (u.getKey() == t.getSender()) u.setBalance(u.getBalance() - t.getAmount());
+            if (u.getKey() == t.getReceiver()) u.setBalance(u.getBalance() + t.getAmount());
         }
     }
 
@@ -111,8 +110,10 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
     log << "Ankstesnio bloko hash: " << prevHash << endl;
     log << "Hash: " << currentBlock.getHash() << endl;
     log << "Nonce: " << currentBlock.getNonce() << endl;
-    log << "Difficulty: " << difficulty << endl;
-    for (const auto& t : blockTransactions) {
+    log << "Sudetingumas: " << difficulty << endl;
+    time_t t = currentBlock.getTime();
+    log << "Laikas: " << put_time(localtime(&t), "%Y-%m-%d %H:%M:%S") << endl;
+    for (const auto& t : confirmedTransactions) {
         log << t.getID() << " | Siuntėjas: " << t.getSender() << " -> Gavėjas: " << t.getReceiver() << " | Suma: " << t.getAmount() << endl;
     }
     log << "==============================" << endl << endl;
@@ -131,7 +132,7 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
 int main()
 {
     vector<User> users = GenerateUsers();
-    vector<Transaction> transactions = GenerateTransaction(users);
+    vector<Transaction> transactions = GenerateTransactions(users);
 
     vector<Block> chain;
     int difficulty = 3;

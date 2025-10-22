@@ -56,21 +56,23 @@ uint64_t Transaction::getAmount() const {return amount_; }
 //Blockchain
 Block::Block(const string& prevHash, const vector<Transaction> transactions, int difficulty)
 : prevHash_(prevHash), transactions_(transactions), difficulty_(difficulty), nonce_(0) {
-    timestamp_ = to_string(time(nullptr));
+    timestamp_ = time(nullptr);
     merkleRootHash_ = calculateMerkleRoot();
 }
 Block::~Block() {};
 
-string Block::getHash() const { return blockHash_; }
 string Block::getPrevHash() const { return prevHash_; }
+string Block::getHash() const { return blockHash_; }
+uint64_t Block::getNonce() const { return nonce_; }
+int Block::getDifficulty() const { return difficulty_; }
+time_t Block::getTime() const { return timestamp_; }
 string Block::getVersion() const { return version_; }
-int Block::getNonce() const { return nonce_; }
+
 const vector<Transaction> Block::getTransactions() const { return transactions_; }
 
 string Block::calculateMerkleRoot() const {
     string all;
-    for (const auto& t : transactions_ )
-    {
+    for (const auto& t : transactions_ ) {
         all += t.getID();
     }
     return HashFun(all);
@@ -79,7 +81,7 @@ string Block::calculateMerkleRoot() const {
 void Block::mineBlock() {
     string prefix(difficulty_, '0');
     while(true) {
-        string data = prevHash_ + timestamp_ + merkleRootHash_ + version_ + to_string(nonce_) + to_string(difficulty_);
+        string data = prevHash_ + merkleRootHash_ + to_string(nonce_) + to_string(difficulty_) + to_string(timestamp_) + version_;
         blockHash_ = HashFun(data);
         if (blockHash_.substr(0, difficulty_) == prefix) break;
         nonce_++;
