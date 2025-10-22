@@ -34,6 +34,7 @@ User::~User() {}
 const string& User::getName() const { return name_; }
 const string& User::getKey() const { return publicKey_; }
 uint64_t User::getBalance() const { return balance_; }
+void User::setBalance(double newBalance) { balance_ = newBalance; }
 
 bool User::canSend(uint64_t amount) const { return balance_ >= amount; }
 void User::send(uint64_t amount) { if (canSend(amount)) balance_ -= amount; }
@@ -62,6 +63,8 @@ Block::~Block() {};
 
 string Block::getHash() const { return blockHash_; }
 string Block::getPrevHash() const { return prevHash_; }
+string Block::getVersion() const { return version_; }
+int Block::getNonce() const { return nonce_; }
 const vector<Transaction> Block::getTransactions() const { return transactions_; }
 
 string Block::calculateMerkleRoot() const {

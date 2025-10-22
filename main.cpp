@@ -10,12 +10,8 @@ uniform_int_distribution<int> rndLetter('A', 'Z');
 vector<User> GenerateUsers() {
     vector<User> users;
     users.reserve(1000);
-
-    ofstream outFile("data/users.txt");
-    if (!outFile.is_open()) {
-        cerr << "Nera failo duomenu irasymui!" << endl;
-        return vector<User>();
-    }
+    ostringstream log;
+    log << "=== Vartotoju generavimas ===" << endl;
 
     for (int i = 0; i < 1000; ++i) {
         string name = "User_" + to_string(i + 1);
@@ -25,23 +21,27 @@ vector<User> GenerateUsers() {
 
         User u(name, key, balance);
         users.emplace_back(u);
-        outFile << u.getName() << "," << u.getKey() << "," << u.getBalance() << endl;
-        cout << "Vardas: " << u.getName() << " | Raktas: " << u.getKey() << " | Balansas: " << u.getBalance() << endl;
+        log << "Vardas: " << u.getName() << " | Raktas: " << u.getKey() << " | Balansas: " << u.getBalance() << endl;
     }
-    cout << "Is viso vartotoju sugeneruota: " << users.size() << endl;
-    outFile.close();
+    log << "Is viso vartotoju sugeneruota: " << users.size() << endl;
+
+//    cout << log.str();
+    ofstream outFile("data/users.txt");
+    if (outFile.is_open()) {
+        outFile << log.str();
+        outFile.close();
+    } else {
+        cerr << "Nera failo duomenu irasymui!" << endl;
+        return vector<User>();
+    }
     return users;
 }
 
 vector<Transaction> GenerateTransaction(vector<User>& users) {
     vector<Transaction> transactions;
     transactions.reserve(10000);
-
-    ofstream outFile("data/transactions.txt");
-    if (!outFile.is_open()) {
-        cerr << "Nera failo duomenu irasymui!" << endl;
-        return vector<Transaction>();
-    }
+    ostringstream log;
+    log << "=== Transakciju generavimas ===" << endl;
 
     int generated = 0;
     while (generated < 10000) {
@@ -57,31 +57,39 @@ vector<Transaction> GenerateTransaction(vector<User>& users) {
 
         Transaction t(users[senderInd].getKey(), users[receiverInd].getKey(), amount);
         transactions.emplace_back(t);
-        outFile << t.getID() << "," << t.getSender() << "," << t.getReceiver() << "," << t.getAmount() << endl;
-        cout << t.getID() << " | " << t.getSender() << " -> " << t.getReceiver() << " : " << t.getAmount() << endl;
-
+        
+        log << t.getID() <<  " | " << t.getSender() << " -> " << t.getReceiver() << " : " << t.getAmount() << endl;
         ++generated;
     }
-    cout << "Is viso transakciju sugeneruota: " << transactions.size() << endl;
-    outFile.close();
+    log << "Is viso transakciju sugeneruota: " << transactions.size() << endl;
+    
+//    cout << log.str();
+    ofstream outFile("data/transactions.txt");
+    if (outFile.is_open()) {
+        outFile << log.str();
+        outFile.close();
+    } else {
+        cerr << "Nera failo duomenu irasymui!" << endl;
+        return vector<Transaction>();
+    }
     return transactions;
 }
 
-void MineBlock(vector<Transaction>& pendingTransactions, vector<Block> chain, int difficulty) {
+void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, vector<User>& users, int difficulty) {
     if (pendingTransactions.empty()) {
-        cout << "Nera transakciju bloko formavimui" << endl;
+        cerr << "Nera transakciju bloko formavimui" << endl;
         return;
     }
-    size_t minSize = min<size_t>(100, pendingTransactions.size());
 
+    size_t minSize = min<size_t>(100, pendingTransactions.size());
     vector<Transaction> blockTransactions;
     blockTransactions.reserve(minSize);
     for (size_t i = 0; i < minSize; ++i) {
         blockTransactions.push_back(pendingTransactions.back());
         pendingTransactions.pop_back();
-    }
-    
+    } 
     string prevHash = chain.empty() ? string("0") : chain.back().getHash();
+
     Block currentBlock(prevHash, blockTransactions, difficulty);
     auto start = chrono::high_resolution_clock::now();
     currentBlock.mineBlock();
@@ -89,28 +97,50 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block> chain, in
     chrono::duration<double> duration = end - start;
     chain.push_back(currentBlock);
 
-     cout << "Iskastas Blokas #" << chain.size() << "hash'as = " << currentBlock.getHash() << "..." << " transakcijos = " << blockTransactions.size() << " laikas = " << duration.count() << " sekundziu" << endl;
+    for (const auto& t : blockTransactions) {
+        for (auto& u : users) {
+            if (u.getName() == t.getSender()) u.setBalance(u.getBalance() - t.getAmount());
+            if (u.getName() == t.getReceiver()) u.setBalance(u.getBalance() + t.getAmount());
+        }
+    }
+
+    ostringstream log;
+    log << "==============================" << endl;
+    log << "Blokas #" << chain.size() << endl;
+    log << "Versija: " << currentBlock.getVersion() << endl;
+    log << "Ankstesnio bloko hash: " << prevHash << endl;
+    log << "Hash: " << currentBlock.getHash() << endl;
+    log << "Nonce: " << currentBlock.getNonce() << endl;
+    log << "Difficulty: " << difficulty << endl;
+    for (const auto& t : blockTransactions) {
+        log << t.getID() << " | Siuntėjas: " << t.getSender() << " -> Gavėjas: " << t.getReceiver() << " | Suma: " << t.getAmount() << endl;
+    }
+    log << "==============================" << endl << endl;
+
+//    cout << log.str();
+    ofstream outFile("data/blocks.txt", ios::app);
+    if (outFile.is_open()) {
+        outFile << log.str();
+        outFile.close();
+    } else {
+        cerr << "Nera failo duomenu irasymui!" << endl;
+        return;
+    }
 }
 
 int main()
 {
     vector<User> users = GenerateUsers();
-    //uint64_t totalBefore = 0;
-    //for (auto& u : users) totalBefore += u.getBalance();
-
     vector<Transaction> transactions = GenerateTransaction(users);
 
     vector<Block> chain;
     int difficulty = 3;
-    while (!transactions.empty()) {
-        MineBlock(transactions, chain, difficulty);
+    ofstream outFile("data/blocks.txt");
+    outFile.close();
+    while (transactions.size() > 0) {
+        MineBlock(transactions, chain, users, difficulty);
     }
+
     cout << "Liko neapdorotu tansakciju: " << transactions.size();
-
-    //uint64_t totalAfter = 0;
-    //for (auto& u : users) totalAfter += u.getBalance();
-
-    //cout << "Viso valiutos prieš transakcijas: " << totalBefore << endl;
-    //cout << "Viso valiutos po transakcijų: " << totalAfter << endl;
     return 0;
 }

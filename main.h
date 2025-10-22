@@ -7,6 +7,7 @@
 #include <fstream>
 #include <chrono>
 #include <algorithm>
+#include <sstream>
 using namespace std;
 
 string HashFun(const string&);
@@ -24,6 +25,7 @@ public:
     const string& getName() const;
     const string& getKey() const;
     uint64_t getBalance() const;
+    void setBalance(double newBalance);
 
     bool canSend(uint64_t amount) const;
     void send(uint64_t amount);
@@ -65,6 +67,8 @@ public:
 
     string getHash() const;
     string getPrevHash() const;
+    string getVersion() const;
+    int getNonce() const;
     const vector<Transaction> getTransactions() const;
 
     string calculateMerkleRoot() const;
