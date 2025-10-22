@@ -129,6 +129,29 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
     }
 }
 
+bool isChainValid (const vector<Block>& chain) {
+    for (size_t i = 0; i < chain.size(); ++i) {
+        const Block& current = chain[i];
+        
+        string merkle = current.calculateMerkleRoot();
+        string data = current.getPrevHash() + merkle + to_string(current.getNonce()) + to_string(current.getDifficulty()) + to_string(current.getTime()) + current.getVersion();
+        string calculatedHash = HashFun(data);
+
+        if (current.getHash() != calculatedHash) {
+            cerr << "Blokas #" << i + 1 << " turi neteisinga hash!" << endl;
+            return false;
+        }
+        if (i > 0) {
+            const Block& previous = chain[i - 1];
+            if (current.getPrevHash() != previous.getHash()) {
+                cerr << "Blokas #" << i + 1 << " neturi teisingo ankstesnio hash!" << endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 int main()
 {
     vector<User> users = GenerateUsers();
@@ -141,7 +164,10 @@ int main()
     while (transactions.size() > 0) {
         MineBlock(transactions, chain, users, difficulty);
     }
-
-    cout << "Liko neapdorotu tansakciju: " << transactions.size();
+    if (isChainValid(chain)) {
+        cout << "|OK| Bloku grandine teisinga!" << endl;
+    } else {
+        cout << "|BAD| Bloku grandine sugadinta!" << endl;
+    }
     return 0;
 }
