@@ -6,7 +6,6 @@ uniform_int_distribution<uint64_t> rndBalance(100, 1000000);
 uniform_int_distribution<int> rndUser(0, 999);
 uniform_int_distribution<int> rndLetter('A', 'Z');
 
-
 // Console loging
 void ConsoleUserStats(const vector<User>& users) {
     uint64_t totalBalance = 0, maxBalance = 0, minBalance = UINT64_MAX;
@@ -17,12 +16,13 @@ void ConsoleUserStats(const vector<User>& users) {
     }
     double avgBalance = static_cast<double>(totalBalance) / users.size();
 
-    cout << "=== Vartotoju generavimas ===" << endl;
-    cout << " - Sugeneruota vartotoju: " << users.size() << endl;
+    cout << "=== VARTOTOJAI ===" << endl;
+    cout << " - Viso vartotoju: " << users.size() << endl;
     cout << " - Bendras balansas: " << totalBalance << endl;
     cout << " - Vidutinis balansas: " << (uint64_t)avgBalance << endl;
-    cout << " - Maksimalus balansas: " << maxBalance << endl;
-    cout << " - Minimalus balansas: " << minBalance << endl;
+    cout << " - Didziausias balansas: " << maxBalance << endl;
+    cout << " - Maziausias balansas: " << minBalance << endl;
+    cout << " * Kiekvieno vartotojo duomenys issaugoti i faila: data/users.txt" << endl;
     cout << "=============================" << endl << endl;
 }
 
@@ -35,25 +35,26 @@ void ConsoleTransactionStats(const vector<Transaction>& transactions) {
     }
     double avgAmount = transactions.empty() ? 0 : static_cast<double>(totalAmount) / transactions.size();
 
-    cout << "=== Transakciju generavimas ===" << endl;
-    cout << " - Sugeneruota transakciju: " << transactions.size() << endl;
-    cout << " - Bendra pervesta suma: " << totalAmount << endl;
+    cout << "=== TRANSAKCIJOS ===" << endl;
+    cout << " - Viso transakciju: " << transactions.size() << endl;
+    cout << " - Bendra suma: " << totalAmount << endl;
     cout << " - Vidutine suma: " << (uint64_t)avgAmount << endl;
     cout << " - Didziausia suma: " << maxAmount << endl;
     cout << " - Maziausia suma: " << minAmount << endl;
+    cout << " * Kiekvienos transakcijos duomenys issaugoti i faila: data/transactions.txt" << endl;
     cout << "===============================" << endl << endl;
 }
 
-// Writing to file
+// Writing to files
 void ToFileUsers(const vector<User>& users) {
     ofstream outFile("data/users.txt");
     if (!outFile.is_open()) {
-        cerr << "Nepavyko atidaryti failo vartotojams!" << endl;
+        cerr << "Nepavyko atidaryti failo su vartotojais!" << endl;
         return;
     } else {
-    outFile << "=== Vartotoju generavimas ===" << endl;
+    outFile << "=== Vartotoju generavimas (vardas, raktas, balansas) ===" << endl;
         for (const auto& u : users) {
-            outFile << "Vardas: " << u.getName() << " | Raktas: " << u.getKey() << " | Balansas: " << u.getBalance() << endl;
+            outFile << u.getName() << "," << u.getKey() << "," << u.getBalance() << endl;
         }
     outFile << "Sugeneruota vartotoju: " << users.size() << endl;
     outFile.close();
@@ -63,12 +64,12 @@ void ToFileUsers(const vector<User>& users) {
 void ToFileTransactions(const vector<Transaction>& transactions) {
     ofstream outFile("data/transactions.txt");
     if (!outFile.is_open()) {
-        cerr << "Nepavyko atidaryti failo transakcijoms!" << endl;
+        cerr << "Nepavyko atidaryti failo su transakcijomis!" << endl;
         return;
     } else {
-        outFile << "=== Transakciju generavimas ===" << endl;
+        outFile << "=== Transakciju generavimas (transakcijos hash, siuntejas, gavejas, suma) ===" << endl;
         for (const auto& t : transactions) {
-            outFile << t.getID() << " | Siuntejas: " << t.getSender() << " -> Gavejas: " << t.getReceiver() << " | Suma: " << t.getAmount() << endl;
+            outFile << t.getID() << "," << t.getSender() << "," << t.getReceiver() << "," << t.getAmount() << endl;
         }
         outFile << "Sugeneruota transakciju: " << transactions.size() << endl;
         outFile.close();
@@ -78,7 +79,7 @@ void ToFileTransactions(const vector<Transaction>& transactions) {
 void ToFileBlocks (const Block& block, const vector<Transaction>& confirmedTransactions, int size, int difficulty) {
     ofstream outFile("data/blocks.txt", ios::app);
         if (!outFile.is_open()) {
-        cerr << "Nepavyko atidaryti failo blokams!" << endl;
+        cerr << "Nepavyko atidaryti failo su blokais!" << endl;
         return;
     } else {
         outFile  << "==============================" << endl;
@@ -99,6 +100,57 @@ void ToFileBlocks (const Block& block, const vector<Transaction>& confirmedTrans
     }
 }
 
+// Reading from files
+vector<User> LoadUsers() {
+    vector<User> users;
+    ifstream inFile("data/users.txt");
+    if (!inFile.is_open()) {
+        cerr << "Nepavyko atidaryti failo su vartotojais! " << endl;
+        return users;
+    }
+
+    string line;
+    while (getline(inFile, line)) {
+        if (line.empty()) continue;
+        stringstream ss(line);
+        string name, balanceStr;
+        if (getline(ss, name, ',') && getline(ss, balanceStr, ',')) {
+            uint64_t balance = stoull(balanceStr);
+            string key = "PUBKEY_";
+            for (int i = 0; i < 16; ++i) key += static_cast<char>(rndLetter(rndGen));
+            users.emplace_back(name, key, balance);
+        }
+    }
+
+    inFile.close();
+    ConsoleUserStats(users);
+    return users;
+}
+
+vector<Transaction> LoadTransactions() {
+    vector<Transaction> transactions;
+    ifstream inFile("data/transactions.txt");
+    if (!inFile.is_open()) {
+        cerr << "Nepavyko atidaryti failo su trnsakcijomis! " << endl;
+        return transactions;
+    }
+
+    string line;
+    while (getline(inFile, line)) {
+        if (line.empty()) continue;
+        stringstream ss(line);
+        string sender, receiver, amountStr;
+        if (getline(ss, sender, ',') && getline(ss, receiver, ',') && getline(ss, amountStr, ',')) {
+            uint64_t amount = stoull(amountStr);
+            transactions.emplace_back(sender, receiver, amount);
+        }
+    }
+
+    inFile.close();
+    ConsoleTransactionStats(transactions);
+    return transactions;
+}
+
 // Main functions
 vector<User> GenerateUsers() {
     
@@ -111,7 +163,7 @@ vector<User> GenerateUsers() {
         for (int j = 0; j < 16; ++j) key += static_cast<char>(rndLetter(rndGen));
         uint64_t  balance = rndBalance(rndGen);
         User u(name, key, balance);
-        users.push_back(u);
+        users.emplace_back(u);
     }
 
     ConsoleUserStats(users);
@@ -134,7 +186,7 @@ vector<Transaction> GenerateTransactions(vector<User>& users) {
         
         uint64_t amount = uniform_int_distribution<uint64_t>(1, maxPossible)(rndGen);
         Transaction t(users[senderInd].getKey(), users[receiverInd].getKey(), amount);
-        transactions.push_back(t);
+        transactions.emplace_back(t);
         ++generated;
     }
 
@@ -152,7 +204,7 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
     vector<Transaction> confirmedTransactions;
     confirmedTransactions.reserve(minSize);
     for (size_t i = 0; i < minSize; ++i) {
-        confirmedTransactions.push_back(pendingTransactions.back());
+        confirmedTransactions.emplace_back(pendingTransactions.back());
         pendingTransactions.pop_back();
     }
 
@@ -172,7 +224,7 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
         }
         totalAmount += t.getAmount();
     }
-    chain.push_back(currentBlock);
+    chain.emplace_back(currentBlock);
 
     // Console log
     cout << " --- Iškastas blokas #" << chain.size() << " ---" << endl;
@@ -211,10 +263,25 @@ int main()
 {
     cout << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- BLOCKCHAIN =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << endl;
     int difficulty = 3;
-
-    vector<User> users = GenerateUsers();
-    vector<Transaction> transactions = GenerateTransactions(users);
+    vector<User> users;
+    vector<Transaction> transactions;
     vector<Block> chain;
+
+    int choice;
+    cout << "Pasirinkite kaip generuoti bloku grandine, ivesdami skaiciu:" << endl;
+    cout << " 0 - atsitiktinai generuoti 1000 vartotoju ir 10 000 transakciju" << endl;
+    cout << " 1 - perskaityti vartotojus ir transakcijas is failu" << endl;
+    cin >> choice;
+    if (choice == 0) {
+        users = GenerateUsers();
+        transactions = GenerateTransactions(users);
+    } else if (choice == 1) {
+        users = LoadUsers();
+        transactions = LoadTransactions();
+    } else {
+        cerr << "Neteisingas pasirinkimas!" << endl;
+        return 1;
+    }
 
     cout << "=== Bloku generavimas ===" << endl;
     ofstream("data/blocks.txt").close();
@@ -230,7 +297,7 @@ int main()
     }
     cout << " - Vidutinis nonce: " << (chain.size() ? totalNonce / chain.size() : 0) << endl;
     cout << " - Vidutinis transakciju kiekis: " << (chain.size() ? transactionCount / chain.size() : 0) << endl;
-    cout << "* Kiekvieno bloko duomenys issaugoti i faila: data/bloks.txt" << endl;
+    cout << " * Kiekvieno bloko duomenys issaugoti i faila: data/blocks.txt" << endl;
 
     if (isChainValid(chain)) {
         cout << "|OK| Bloku grandine sukurta teisingai!" << endl;
