@@ -2,11 +2,13 @@
 Blokas #1
 Versija: v0.1
 Ankstesnio bloko hash: 0
-Bloko hash: 000c939b2ad65b275c3fdecd306a2de11845cac3a3582ad76ffa75837be87f33
-Nonce: 7757
+Bloko hash: 0008133dbf2bb4fbb56b0fbbe9966f6ce82d693ff9987fdeda27746f725cfe08
+Nonce: 1869
 Sudetingumas: 3
-Laikas: 2025-10-27 18:14:43
+Laikas: 2025-10-27 19:52:00
 --- Transakcijos ---
-a7ff6a5fe3592d03f9a41ac6ad71354aee803f388c7970e799bf40ae27718831 | Siuntejas: as -> Gavejas: jis | Suma: 10
+bc273321240df218bc8da421d860247038d3d9e24fb4cf6b3cfabdcb9ec48a70 | Siuntejas: PUBKEY_UWCUFDMOXGRJYHYW -> Gavejas: PUBKEY_NWYNTPHFKYYDNAPM | Suma: 10
+88f2d7096000802e563991d8b6889c3e6e97b82c8a194a11a416f595f2eedc51 | Siuntejas: PUBKEY_NWYNTPHFKYYDNAPM -> Gavejas: PUBKEY_UWCUFDMOXGRJYHYW | Suma: 10
+1758d7500516d3921837831807ae2850579712812dd798eb7ee37eb30b0e8734 | Siuntejas: PUBKEY_UWCUFDMOXGRJYHYW -> Gavejas: PUBKEY_NWYNTPHFKYYDNAPM | Suma: 1
 ==============================
 

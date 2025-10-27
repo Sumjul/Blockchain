@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <unordered_map>
 using namespace std;
 
 string HashFun(const string&);

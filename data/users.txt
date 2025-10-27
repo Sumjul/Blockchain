@@ -1,2 +1,4 @@
-as,1
-jis,1
+=== Vartotoju generavimas (vardas, raktas, balansas) ===
+as,PUBKEY_UWCUFDMOXGRJYHYW,9
+jis,PUBKEY_NWYNTPHFKYYDNAPM,1
+Sugeneruota vartotoju: 2

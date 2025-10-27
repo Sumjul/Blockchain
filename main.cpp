@@ -8,6 +8,13 @@ uniform_int_distribution<int> rndLetter('A', 'Z');
 
 // Console loging
 void ConsoleUserStats(const vector<User>& users) {
+    if (users.empty()) {
+        cout << "=== VARTOTOJAI ===" << endl;
+        cout << " - Nera vartotoju." << endl;
+        cout << "=============================" << endl << endl;
+        return;
+    }
+
     uint64_t totalBalance = 0, maxBalance = 0, minBalance = UINT64_MAX;
     for (const auto& u : users) {
         totalBalance += u.getBalance();
@@ -27,6 +34,13 @@ void ConsoleUserStats(const vector<User>& users) {
 }
 
 void ConsoleTransactionStats(const vector<Transaction>& transactions) {
+    if (transactions.empty()) {
+        cout << "=== TRANSAKCIJOS ===" << endl;
+        cout << " - Nera transakciju." << endl;
+        cout << "=============================" << endl << endl;
+        return;
+    }
+
     uint64_t totalAmount = 0, maxAmount = 0, minAmount = UINT64_MAX;
     for (const auto& t : transactions) {
         totalAmount += t.getAmount();
@@ -52,11 +66,11 @@ void ToFileUsers(const vector<User>& users) {
         cerr << "Nepavyko atidaryti failo su vartotojais!" << endl;
         return;
     } else {
-    outFile << "=== Vartotoju generavimas (vardas, raktas, balansas) ===" << endl;
+    outFile << "=== Vartotoju sarasas (vardas, raktas, balansas) ===" << endl;
         for (const auto& u : users) {
             outFile << u.getName() << "," << u.getKey() << "," << u.getBalance() << endl;
         }
-    outFile << "Sugeneruota vartotoju: " << users.size() << endl;
+    outFile << "Viso vartotoju: " << users.size() << endl;
     outFile.close();
     }
 }
@@ -67,11 +81,11 @@ void ToFileTransactions(const vector<Transaction>& transactions) {
         cerr << "Nepavyko atidaryti failo su transakcijomis!" << endl;
         return;
     } else {
-        outFile << "=== Transakciju generavimas (transakcijos hash, siuntejas, gavejas, suma) ===" << endl;
+        outFile << "=== Transakciju sarasas (transakcijos hash, siuntejas, gavejas, suma) ===" << endl;
         for (const auto& t : transactions) {
             outFile << t.getID() << "," << t.getSender() << "," << t.getReceiver() << "," << t.getAmount() << endl;
         }
-        outFile << "Sugeneruota transakciju: " << transactions.size() << endl;
+        outFile << "Viso transakciju: " << transactions.size() << endl;
         outFile.close();
     }
 }
@@ -127,12 +141,17 @@ vector<User> LoadUsers() {
     return users;
 }
 
-vector<Transaction> LoadTransactions() {
+vector<Transaction> LoadTransactions(const vector<User>& users) {
     vector<Transaction> transactions;
     ifstream inFile("data/transactions.txt");
     if (!inFile.is_open()) {
         cerr << "Nepavyko atidaryti failo su trnsakcijomis! " << endl;
         return transactions;
+    }
+
+    unordered_map<string, string> nameToKey;
+    for (const auto& u : users) {
+        nameToKey[u.getName()] = u.getKey();
     }
 
     string line;
@@ -142,7 +161,9 @@ vector<Transaction> LoadTransactions() {
         string sender, receiver, amountStr;
         if (getline(ss, sender, ',') && getline(ss, receiver, ',') && getline(ss, amountStr, ',')) {
             uint64_t amount = stoull(amountStr);
-            transactions.emplace_back(sender, receiver, amount);
+            string senderKey = nameToKey[sender];
+            string receiverKey = nameToKey[receiver];
+            transactions.emplace_back(senderKey, receiverKey, amount);
         }
     }
 
@@ -198,14 +219,51 @@ vector<Transaction> GenerateTransactions(vector<User>& users) {
 void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, vector<User>& users, int difficulty) {
     if (pendingTransactions.empty()) return;
     
-    size_t minSize = min<size_t>(100, pendingTransactions.size());
-    shuffle(pendingTransactions.begin(), pendingTransactions.end(), rndGen);
+    unordered_map<string, size_t> keyIndex;
+    for (size_t i = 0; i < users.size(); ++i) keyIndex[ users[i].getKey() ] = i;
 
+    size_t targetCount = min<size_t>(100, pendingTransactions.size());
     vector<Transaction> confirmedTransactions;
-    confirmedTransactions.reserve(minSize);
-    for (size_t i = 0; i < minSize; ++i) {
-        confirmedTransactions.emplace_back(pendingTransactions.back());
-        pendingTransactions.pop_back();
+    confirmedTransactions.reserve(targetCount);
+    vector<Transaction> remainingTransactions;
+    remainingTransactions.reserve(pendingTransactions.size());
+    size_t skipped_invalid = 0;
+    for (auto &t : pendingTransactions) {
+        if (confirmedTransactions.size() >= targetCount) {
+            remainingTransactions.emplace_back(t);
+            continue;
+        }
+
+        const string &senderKey = t.getSender();
+        const string &receiverKey = t.getReceiver();
+        uint64_t amount = t.getAmount();
+
+        auto itSender = keyIndex.find(senderKey);
+        auto itReceiver = keyIndex.find(receiverKey);
+
+        if (itSender == keyIndex.end() || itReceiver == keyIndex.end()) {
+            ++skipped_invalid;
+            continue;
+        }
+
+        size_t sInd = itSender->second;
+        size_t rInd = itReceiver->second;
+
+        if (users[sInd].getBalance() < amount) {
+            ++skipped_invalid;
+            continue;
+        }
+
+        users[sInd].setBalance(users[sInd].getBalance() - amount);
+        users[rInd].setBalance(users[rInd].getBalance() + amount);
+
+        confirmedTransactions.push_back(t);
+    }
+    pendingTransactions.swap(remainingTransactions);
+
+    if (confirmedTransactions.empty()) {
+        cerr << "Nera galiojanciu transakciju bloko formavimui arba visi siuntejai neturi pakankamai lesu." << endl;
+        return;
     }
 
     string prevHash = chain.empty() ? to_string(0) : chain.back().getHash();
@@ -216,24 +274,21 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
     
-    uint64_t totalAmount = 0;
-    for (const auto& t : confirmedTransactions) {
-        for (auto& u : users) {
-            if (u.getKey() == t.getSender()) u.setBalance(u.getBalance() - t.getAmount());
-            if (u.getKey() == t.getReceiver()) u.setBalance(u.getBalance() + t.getAmount());
-        }
-        totalAmount += t.getAmount();
-    }
     chain.emplace_back(currentBlock);
 
     // Console log
+    uint64_t totalAmount = 0;
+    for (const auto &t : confirmedTransactions) totalAmount += t.getAmount();
     cout << " --- Iškastas blokas #" << chain.size() << " ---" << endl;
     cout << " - Kasimo laikas: " << duration.count() << " s." << endl;
     cout << " - Sudetingumas: " << difficulty << " | Nonce: " << currentBlock.getNonce() << endl;
     cout << " - Transakciju skaicius: " << confirmedTransactions.size() << " | Suma: " << totalAmount << endl;
+    cout << " - Praleistos negaliojančios transakcijos: " << skipped_invalid << endl;
     cout << "-----------------------------" << endl << endl;
 
     ToFileBlocks(currentBlock, confirmedTransactions, chain.size(), difficulty);
+    ToFileUsers(users);
+    ToFileTransactions(confirmedTransactions);
 }
 
 bool isChainValid (const vector<Block>& chain) {
@@ -277,7 +332,7 @@ int main()
         transactions = GenerateTransactions(users);
     } else if (choice == 1) {
         users = LoadUsers();
-        transactions = LoadTransactions();
+        transactions = LoadTransactions(users);
     } else {
         cerr << "Neteisingas pasirinkimas!" << endl;
         return 1;
