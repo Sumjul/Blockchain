@@ -113,13 +113,25 @@ vector<User> LoadUsers() {
     string line;
     while (getline(inFile, line)) {
         if (line.empty() || line[0] == '=') continue;
-        string name, key = "PUBKEY_", balanceStr;
         stringstream ss(line);
-        if (getline(ss, name, ',') && getline(ss, balanceStr, ',')) {
-            uint64_t balance = stoull(balanceStr);
+        vector<string> parts;
+        string part;
+        while (getline(ss, part, ',')) parts.push_back(part);
+        if (parts.size() < 2) continue;
+
+        string name = parts[0];
+        string key;
+        uint64_t balance = 0;
+
+        if (parts.size() == 2) {
+            key = "PUBKEY_";
             for (int i = 0; i < 16; ++i) key += static_cast<char>(rndLetter(rndGen));
-            users.emplace_back(name, key, balance);
+            balance = stoull(parts[1]);
+        } else if (parts.size() == 3) {
+            key = parts[1];
+            balance = stoull(parts[2]);
         }
+        users.emplace_back(name, key, balance);
     }
 
     ConsoleUserStats(users);
@@ -140,12 +152,29 @@ vector<Transaction> LoadTransactions(const vector<User>& users) {
     string line;
     while (getline(inFile, line)) {
         if (line.empty() || line[0] == '=') continue;
-        string sender, receiver, amountStr;
         stringstream ss(line);
-        if (getline(ss, sender, ',') && getline(ss, receiver, ',') && getline(ss, amountStr, ',')) {
-            uint64_t amount = stoull(amountStr);
-            transactions.emplace_back(nameToKey[sender], nameToKey[receiver], amount);
+        vector<string> parts;
+        string part;
+        while (getline(ss, part, ',')) parts.push_back(part);
+        if (parts.size() < 3) continue;
+
+        string sender, receiver;
+        uint64_t amount = 0;
+        string hash;
+        if (parts.size() == 3) {
+            sender = parts[0];
+            receiver = parts[1];
+            amount = stoull(parts[2]);
+        } else if (parts.size() == 4) {
+            hash = parts[0];
+            sender = parts[1];
+            receiver = parts[2];
+            amount = stoull(parts[3]);
         }
+        string senderKey = nameToKey.count(sender) ? nameToKey[sender] : sender;
+        string receiverKey = nameToKey.count(receiver) ? nameToKey[receiver] : receiver;
+
+        transactions.emplace_back(senderKey, receiverKey, amount);
     }
 
     ConsoleTransactionStats(transactions);
@@ -232,18 +261,22 @@ void MineBlock(vector<Transaction>& pendingTransactions, vector<Block>& chain, v
 
     // Console log
     uint64_t totalAmount = 0;
+    double timeTaken = chrono::duration<double>(end - start).count();
+    uint64_t transactionSpeed = confirmedTransactions.size() / timeTaken;
     for (const auto &t : confirmedTransactions) totalAmount += t.getAmount();
-    cout << " --- Iškastas blokas #" << chain.size() << " ---" << endl;
-    cout << " - Kasimo laikas: " << chrono::duration<double>(end - start).count() << " s." << endl;
+
+    cout << " ------------ Iškastas blokas #" << chain.size() << " ------------" << endl;
+    cout << " - Kasimo laikas: " << timeTaken << " s." << endl;
+    cout << " - Greitis: " << transactionSpeed << " transakciju per sekunde" << endl;
     cout << " - Sudetingumas: " << difficulty << " | Nonce: " << block.getNonce() << endl;
     cout << " - Transakciju skaicius: " << confirmedTransactions.size() << " | Suma: " << totalAmount << endl;
-    cout << " - Praleistos negaliojančios transakcijos: " << skipped << endl;
-    cout << "-----------------------------" << endl << endl;
+    cout << " - Praleistos negaliojančios transakcijos: " << skipped << endl << endl;
 
     ToFileBlocks(block, confirmedTransactions, chain.size(), difficulty);
 }
 
 bool isChainValid (const vector<Block>& chain) {
+    if (chain.size() < 1) return false;
     for (size_t i = 0; i < chain.size(); ++i) {
         const Block& current = chain[i];
         string expectedHash = HashFun(current.getPrevHash() + current.calculateMerkleRoot() + to_string(current.getNonce()) + to_string(current.getDifficulty()) + to_string(current.getTime()) + current.getVersion());
@@ -285,11 +318,12 @@ int main()
         return 1;
     }
 
+    size_t initialTransactions = transactions.size();
     unordered_map<string,size_t> keyIndex;
     for (size_t i = 0; i < users.size(); ++i) keyIndex[users[i].getKey()] = i;
 
     ofstream("data/blocks.txt").close();
-    cout << "=== Bloku generavimas ===" << endl;
+    cout << "=== BLOKU GENERAVIMAS ===" << endl;
     while (!transactions.empty()) {
         MineBlock(transactions, chain, users, difficulty, keyIndex);
     }
@@ -302,14 +336,20 @@ int main()
     }
     ToFileTransactions(confirmedTransactions);
 
-    uint64_t totalNonce = 0, totalTransactions = 0;
+    size_t totalNonce = 0, totalTransactions = 0;
     for (const auto& block : chain) {
         totalNonce += block.getNonce();
         totalTransactions += block.getTransactions().size();
     }
-    cout << " - Vidutinis nonce: " << (chain.empty() ? 0 : totalNonce / chain.size()) << endl;
-    cout << " - Vidutinis transakciju kiekis: " << (chain.empty() ? 0 : totalTransactions / chain.size()) << endl;
-    cout << " * Kiekvieno bloko duomenys issaugoti i faila: data/blocks.txt" << endl;
+    cout << "=== BLOKU GRANDINES SANTRAUKA ===" << endl;
+    cout << " - Sukurta bloku: " << chain.size() << endl;
+    cout << " - Patvirtinta transakcijų: " << confirmedTransactions.size() << endl;
+    cout << " - Vidutinis visu bloku nonce: " << (chain.empty() ? 0 : totalNonce / chain.size()) << endl;
+    cout << " - Vidutinis transakciju kiekis bloke: " << (chain.empty() ? 0 : totalTransactions / chain.size()) << endl;
+    cout << " * Kiekvieno bloko duomenys issaugoti i faila: data/blocks.txt" << endl << endl;
+
+    ConsoleUserStats(users);
+    ConsoleTransactionStats(confirmedTransactions);
 
     cout << (isChainValid(chain) ? "|OK| Grandine teisinga!" : "|BAD| Grandine sugadinta!") << endl;
     cout << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- BLOCKCHAIN END =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << endl;
